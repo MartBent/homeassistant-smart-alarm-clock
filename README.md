@@ -1,106 +1,66 @@
-# ⏰ Smart Alarm Clock — Home Assistant integration
+# Smart Alarm Clock for Home Assistant
 
-_Local-push Home Assistant integration for the DIY [smart-alarm-clock][device] —
-an ESP32-S3 bedside clock that's dark & silent until summoned._
+Home Assistant integration for a DIY ESP32-S3 bedside alarm clock. It talks to the
+clock over its local HTTP API and picks up changes the moment they happen using
+Server-Sent Events, so there's no polling lag and nothing to run in between (no MQTT
+broker). The device firmware and hardware live in the main repo,
+[MartBent/smart-alarm-clock][device].
 
 [![GitHub Release][release-shield]][release]
 [![HACS Custom][hacs-shield]][hacs]
 [![Validate][validate-shield]][validate]
 [![License][license-shield]](LICENSE)
-![Maintenance][maintenance-shield]
 
-Talks to the device's **local** REST API and streams changes over Server-Sent
-Events — instant updates, no cloud, **no MQTT broker required**.
+## Requirements
 
----
+- Home Assistant 2024.x or newer.
+- The clock reachable on your network. Give it a DHCP reservation, or rely on mDNS,
+  so its address stays put.
 
-## ✨ Features
+## Installation
 
-- 🔌 **Local push** (`iot_class: local_push`) — state arrives over SSE the moment
-  it changes on the device; a 60 s poll is the fallback.
-- 🔎 **Zero-config discovery** — the clock advertises over mDNS, so Home
-  Assistant offers it automatically.
-- 🌙 **Display switch** — turn every light-emitting component on/off ("dark until
-  summoned"); a firing alarm always lights up regardless.
-- ⏱️ **Full alarm control** — enable/disable and set the time for each slot,
-  snooze and dismiss, and a live phase sensor.
-
-## 📦 Installation
-
-### HACS (recommended)
+This is a HACS custom repository (it isn't in the default HACS store). Click the
+button to add it, or add it by hand:
 
 [![Open your Home Assistant instance and open this repository inside HACS.][hacs-repo-shield]][hacs-repo]
 
-1. Click the button above, **or** in HACS go to **⋮ → Custom repositories**, add
-   `https://github.com/MartBent/homeassistant-smart-alarm-clock` with type
-   **Integration**.
-2. Search for **Smart Alarm Clock** in HACS and **Download** it.
-3. **Restart Home Assistant.**
+By hand: HACS, then the three-dot menu, then Custom repositories. Paste
+`https://github.com/MartBent/homeassistant-smart-alarm-clock`, choose the
+Integration category, and download it from the HACS list. Restart Home Assistant
+when it's done.
 
-### Manual
+Without HACS: copy `custom_components/smart_alarm_clock/` into your
+`config/custom_components/` folder and restart.
 
-Copy `custom_components/smart_alarm_clock/` into your Home Assistant
-`config/custom_components/` directory, then restart Home Assistant.
+## Adding the clock
 
-## ⚙️ Setup
-
-After installing and restarting:
+Once the clock is on the network it advertises itself over mDNS, so Home Assistant
+usually offers it under Settings → Devices & Services. If it doesn't turn up, add it
+by hand with Add Integration → Smart Alarm Clock and type in its IP address.
 
 [![Add the Smart Alarm Clock integration to your Home Assistant instance.][config-shield]][config]
 
-- **Auto-discovery:** the device shows up under **Settings → Devices & Services**
-  as _“Smart Alarm Clock discovered”_ → **Configure**.
-- **Manual:** **Settings → Devices & Services → Add Integration → Smart Alarm
-  Clock** → enter the device's IP address.
+## Entities
 
-> [!TIP]
-> Give the device a DHCP reservation (or rely on mDNS) so its address stays
-> stable.
+The clock shows up as a single device with these entities:
 
-## 🧩 Entities
+- **Phase** (sensor) — `syncing`, `idle`, `armed`, `ringing`, or `snoozed`.
+- **Time** (sensor) — the clock's own wall time.
+- **Display** (switch) — turns the matrix and status LED off so the clock goes dark.
+  A ringing alarm lights up regardless.
+- **Alarm 1–8** (switch) — enable a slot. The clock is "armed" whenever at least one
+  slot is on.
+- **Alarm 1–8 time** (time) — set each slot's alarm time.
+- **Snooze** / **Dismiss** (button) — only do anything while an alarm is ringing.
+  Dismiss also switches off the slot that fired, so alarms are one-shot.
 
-All under a single **Smart Alarm Clock** device:
+There's deliberately no separate "armed" control: enabling any alarm arms the clock,
+and dismissing a ringing one turns that slot back off.
 
-| Entity | Type | Description |
-| --- | --- | --- |
-| Phase | `sensor` | `syncing` / `idle` / `armed` / `ringing` / `snoozed` |
-| Time | `sensor` | the device's own wall clock |
-| Display | `switch` | all lights on/off (a firing alarm lights up anyway) |
-| Alarm _N_ | `switch` | enable/disable a slot — enabling arms the clock |
-| Alarm _N_ time | `time` | edit a slot's alarm time |
-| Snooze | `button` | snooze while ringing |
-| Dismiss | `button` | dismiss while ringing (disables the fired slot — one-shot) |
+## License
 
-> [!NOTE]
-> There's no explicit _Armed_ switch: the clock is armed whenever any alarm is
-> enabled, and dismissing a ringing alarm turns that slot off.
+MIT. See [LICENSE](LICENSE).
 
-## 🔧 How it works
-
-```mermaid
-flowchart LR
-    HA["Home Assistant<br/>(this integration)"]
-    Dev["Smart Alarm Clock<br/>ESP32-S3"]
-    HA -- "commands · POST /api/*" --> Dev
-    Dev -- "state · GET /api/state (poll)" --> HA
-    Dev -- "realtime · SSE :81/api/events" --> HA
-    Dev -. "mDNS discovery" .-> HA
-```
-
-- **Commands** → `POST /api/command`, `/api/alarm/enabled`, `/api/alarm/time`.
-- **State** → `GET /api/state` (60 s polling fallback).
-- **Realtime** → the device streams changes over SSE on `:81/api/events`.
-
-## 🛠️ Firmware & hardware
-
-The device firmware, hardware (KiCad), and design docs live in the main repo:
-**[MartBent/smart-alarm-clock][device]**.
-
-## 📄 License
-
-Released under the [MIT License](LICENSE).
-
-<!-- Badges -->
 [device]: https://github.com/MartBent/smart-alarm-clock
 [release-shield]: https://img.shields.io/github/release/MartBent/homeassistant-smart-alarm-clock.svg
 [release]: https://github.com/MartBent/homeassistant-smart-alarm-clock/releases
@@ -109,7 +69,6 @@ Released under the [MIT License](LICENSE).
 [validate-shield]: https://github.com/MartBent/homeassistant-smart-alarm-clock/actions/workflows/validate.yml/badge.svg
 [validate]: https://github.com/MartBent/homeassistant-smart-alarm-clock/actions/workflows/validate.yml
 [license-shield]: https://img.shields.io/github/license/MartBent/homeassistant-smart-alarm-clock.svg
-[maintenance-shield]: https://img.shields.io/maintenance/yes/2026.svg
 [hacs-repo-shield]: https://my.home-assistant.io/badges/hacs_repository.svg
 [hacs-repo]: https://my.home-assistant.io/redirect/hacs_repository/?owner=MartBent&repository=homeassistant-smart-alarm-clock&category=integration
 [config-shield]: https://my.home-assistant.io/badges/config_flow_start.svg
