@@ -20,7 +20,9 @@ class SmartAlarmApi:
         async with asyncio.timeout(10):
             async with self._session.get(f"{self._base}/api/state") as resp:
                 resp.raise_for_status()
-                return await resp.json()
+                # The device may serve JSON as text/html; parse regardless of the
+                # Content-Type header (content_type=None disables aiohttp's check).
+                return await resp.json(content_type=None)
 
     async def command(self, cmd: str) -> None:
         """POST /api/command {cmd: snooze|dismiss|display_on|display_off|display_toggle}"""
